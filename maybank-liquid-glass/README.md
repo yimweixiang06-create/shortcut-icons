@@ -1,11 +1,12 @@
 # Maybank Black Liquid Glass Icon
 
-Preserves the uploaded Maybank tiger and lettering pixels. Adds subtle highlights *outside* the top-left and bottom-right rounded tile edge, and a low-key gradient to white artwork.
+Generates an almost pure-black Maybank icon, keeping the existing tiger and wordmark geometry. The top-left and bottom-right highlights appear only **outside** the rounded square.
 
-## Required source image
-Upload the original user-provided Maybank black icon named `maybank-original.webp` to `maybank-liquid-glass/assets/` (file is in the project ZIP). The source file is not yet in this branch.
+## Use GitHub Actions
+1. Add the user-supplied original black Maybank image as `maybank-liquid-glass/assets/maybank-original.webp` on the `maybank-liquid-glass` branch.
+2. Choose **Actions → Build Maybank Black Glass Icon → Run workflow**.
+3. Download the `maybank-black-liquid-glass` artifact containing 1024 and 2048 PNGs.
 
-## Build
-Run `pip install pillow numpy && python maybank-liquid-glass/build.py` from repository root, or select **Actions > Build Maybank Glass Icon > Run workflow** after uploading the original asset. Download the generated 1024/2048 PNG artifact.
+Run locally with `pip install Pillow numpy && python maybank-liquid-glass/build.py`.
 
-Works as a static visual on iOS 18; not native dynamic Liquid Glass. The existing shortcut-icons library is untouched.
+This is a static appearance for iOS 18, not native dynamic Liquid Glass.
