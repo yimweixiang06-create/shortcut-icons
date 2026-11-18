@@ -1,4 +1,4 @@
-name: Build Maybank Glass Icon
+name: Build Maybank Black Glass Icon
 on:
   workflow_dispatch:
   push:
@@ -13,9 +13,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pillow numpy
-      - run: python maybank-liquid-glass/build.py
+      - name: Install dependencies
+        run: python -m pip install Pillow numpy
+      - name: Build 1024 and 2048 PNG
+        run: python maybank-liquid-glass/build.py
       - uses: actions/upload-artifact@v4
         with:
-          name: maybank-liquid-glass-icons
-          path: maybank-liquid-glass/output/*.png
+          name: maybank-black-liquid-glass
+          path: maybank-liquid-glass/output/maybank-black-liquid-glass-*.png
+          if-no-files-found: error
