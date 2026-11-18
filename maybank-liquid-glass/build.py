@@ -1,31 +1,45 @@
-from PIL import Image, ImageFilter, ImageDraw
-import numpy as np
+"""Generate a black Maybank icon from its original artwork with a fine outside rim."""
 from pathlib import Path
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 
-ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "assets/maybank-original.webp"
-OUT = ROOT / "output"
-OUT.mkdir(exist_ok=True)
-S = 2048
-im = Image.open(SRC).convert("RGB").resize((S,S), Image.Resampling.LANCZOS)
-a = np.asarray(im).astype(np.float32)
-gray = a.mean(axis=2)
-m = Image.new("L",(S,S))
-d = ImageDraw.Draw(m)
-scale = S / 980
-d.rounded_rectangle(tuple(round(v*scale) for v in (91,91,889,889)),
-                    radius=round(183*scale), fill=255)
-inside = np.asarray(m.filter(ImageFilter.GaussianBlur(1.3)),dtype=np.float32)/255
-y,x = np.mgrid[0:S,0:S]
-white = np.clip((gray-105)/120,0,1)
-blend = np.clip(.98-.09*(y/S),.86,1)
-new = a*(1-white[:,:,None])+(a*blend[:,:,None])*white[:,:,None]
-soft = np.asarray(m.filter(ImageFilter.GaussianBlur(12)),dtype=np.float32)/255
-outer = np.maximum(soft-inside,0)
-spot1 = np.exp(-(((x-190*scale)/(265*scale))**2+((y-190*scale)/(265*scale))**2)*.9)
-spot2 = np.exp(-(((x-795*scale)/(265*scale))**2+((y-795*scale)/(265*scale))**2)*.9)
-shine = np.clip((spot1+spot2)*outer*.9,0,1)
-new = np.clip(new+(235-new)*shine[:,:,None],0,255).astype("uint8")
-Image.fromarray(new,"RGB").save(OUT/"maybank-liquid-glass-2048.png",optimize=True)
-Image.fromarray(new,"RGB").resize((1024,1024),Image.Resampling.LANCZOS).save(OUT/"maybank-liquid-glass-1024.png",optimize=True)
-print("Created 1024 and 2048 PNG.")
+HERE = Path(__file__).resolve().parent
+SOURCE = HERE / "assets/maybank-original.webp"
+OUT = HERE / "output"
+OUT.mkdir(parents=True, exist_ok=True)
+SIZE = 2048
+if not SOURCE.exists():
+    raise SystemExit("Missing assets/maybank-original.webp: upload the user-supplied original.")
+
+src = Image.open(SOURCE).convert("RGB").resize((SIZE, SIZE), Image.Resampling.LANCZOS)
+p = np.asarray(src, dtype=np.float32)
+yy, xx = np.mgrid[:SIZE, :SIZE]
+scale = SIZE / 980
+shape = Image.new("L", (SIZE, SIZE), 0)
+ImageDraw.Draw(shape).rounded_rectangle(
+    tuple(round(v * scale) for v in (91, 91, 889, 889)),
+    radius=round(183 * scale), fill=255
+)
+mask = np.asarray(shape, dtype=np.float32) / 255
+brightness = np.max(p, axis=2) / 255
+white = np.clip((brightness - .18) / .72, 0, 1) * mask
+white_strength = .94 - .045 * yy / SIZE
+canvas = np.zeros((SIZE, SIZE, 3), dtype=np.float32)
+canvas[:] = (8, 8, 9)
+canvas = canvas * (1 - white[..., None]) + 255 * white[..., None] * white_strength[..., None]
+canvas *= mask[..., None]
+
+# Only external reflection, never a large glow in the dark interior.
+blurred = np.asarray(shape.filter(ImageFilter.GaussianBlur(10 * scale)), dtype=np.float32) / 255
+outside = np.maximum(blurred - mask, 0)
+upper = np.exp(-.5 * (((xx - 184 * scale) / (290 * scale))**2 + ((yy - 174 * scale) / (260 * scale))**2))
+lower = np.exp(-.5 * (((xx - 805 * scale) / (290 * scale))**2 + ((yy - 807 * scale) / (260 * scale))**2))
+shine = np.clip(outside * (upper + lower) * 1.5, 0, .44)
+canvas += shine[..., None] * 205
+
+result = Image.fromarray(np.clip(canvas, 0, 255).astype("uint8"), "RGB")
+for size in (1024, 2048):
+    icon = result if size == SIZE else result.resize((size, size), Image.Resampling.LANCZOS)
+    path = OUT / f"maybank-black-liquid-glass-{size}.png"
+    icon.save(path, optimize=True)
+    print(f"Created {path}")
